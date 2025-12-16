@@ -1,0 +1,9 @@
+__pycache__/
+.ipynb_checkpoints/
+.venv/
+cif/
+data/*/cif
+data/*/val/
+data/*/train/
+data/*/test/
+data/ref_pattern/ref/

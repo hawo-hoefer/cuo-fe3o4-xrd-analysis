@@ -1,0 +1,41 @@
+kind: !AngleDispersive
+  emission_lines:
+  - wavelength_ams: 1.5406
+    weight: 1.0
+  n_steps: 2048
+  two_theta_range: [10, 70]
+  goniometer_radius_mm: 180
+  sample_displacement_mu_m: [-500, 500]
+  instrument_parameters: {u: [0.0, 0.25], v: [0.25, 0.0], w: [0.0, 0.25], x: 0, y: 0, w: 0}
+  background: !Chebyshev
+    coefs: 
+      - [-1.0, 1.0]
+      - [-1.0, 1.0]
+      - [-1.0, 1.0]
+      - [-1.0, 1.0]
+      - [-1.0, 1.0]
+      - [-1.0, 1.0]
+      - [-1.0, 1.0]
+      - [-1.0, 1.0]
+      - [-1.0, 1.0]
+      - [-1.0, 1.0]
+      - [-1.0, 1.0]
+    scale: [0, 1500]
+sample_parameters:
+  structure_permutations: 10000
+  concentration_subset: [1, 7]
+  impurities:
+    - d_hkl_ams: [1.1, 8.1] 
+      intensity: [0, 1]   
+      mean_ds_nm: [5, 50]  
+      eta: [0, 1]           
+      n_peaks: 2            
+      probability: 0.1      
+  structures:
+    - {path: ./cif/CuO_16025.cif,    strain: !Maximum 0.02, mean_ds_nm: [5, 50], ds_eta: [0, 1]}
+    - {path: ./cif/Fe3O4_183969.cif, strain: !Maximum 0.02, mean_ds_nm: [5, 50], ds_eta: [0, 1]}
+simulation_parameters:
+  normalize: false
+  seed: 8910
+  n_patterns: 200000
+  abstol: 1e-3
