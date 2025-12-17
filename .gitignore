@@ -7,3 +7,6 @@ data/*/val/
 data/*/train/
 data/*/test/
 data/ref_pattern/ref/
+exp_data_analysis/*/train/
+exp_data_analysis/*/val/
+trained_models/

@@ -19,7 +19,6 @@ class Trainer:
         model: torch.nn.Module,
         train_loader: DataLoader,
         val_loader: DataLoader,
-        test_loader: DataLoader,
         optimizer: Optimizer,
         schedulers: list[torch.optim.lr_scheduler.LRScheduler],
         with_progress: bool = False
@@ -32,18 +31,15 @@ class Trainer:
         self.schedulers = schedulers
         self.back_metric = back_metric
         self.with_progress = with_progress
-        self.test_loader = test_loader
 
-    def half_epoch(self, p: None | tqdm, state: Literal["train", "test", "val"]) -> MetricDict:
+    def half_epoch(self, p: None | tqdm, state: Literal["train", "val"]) -> MetricDict:
         self.m.reset()
         if state == "train":
             loader = self.tl
-        elif state == "test":
-            loader = self.test_loader
         elif state == "val":
             loader = self.vl
         else:
-            raise ValueError(f"Invalid state for half_epoch: '{state}'. Must be either 'train', 'test', or 'val'.")
+            raise ValueError(f"Invalid state for half_epoch: '{state}'. Must be either 'train' or 'val'.")
 
         for X, Y in loader:
             if isinstance(X, Sequence):
@@ -89,16 +85,3 @@ class Trainer:
                     s.step()
 
         return tm, vm
-
-    def test(self) -> MetricDict:
-        if self.with_progress:
-            p = tqdm(total=len(self.test_loader), leave=False)
-        else:
-            p = None
-
-        self.m.reset()
-
-        with torch.no_grad():
-            vm = self.half_epoch(p, "test")
-
-        return vm

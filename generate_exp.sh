@@ -32,14 +32,6 @@ fi
 
 set -xeo pipefail
 
-dirs=(
-  "c3"
-  "c4"
-  "cuka"
-  "cuka1"
-  "cukab"
-)
-
 ln -srf ./cif/ ./data/ref_pattern/cif
 pushd ./data/ref_pattern/
 if [[ $CLEAN -eq 0 ]]; then
@@ -50,21 +42,23 @@ fi
 popd
 
 if [[ $ONLY_REF -eq 1 ]]; then
-  echo "done generating reference pattern. exiting..."
-  exit 0
+  exit
 fi
 
+dirs=(
+  "cuka"
+  # "cukab"
+)
+
 for dir in ${dirs[@]}; do
-  ln -srf ./cif/ ./data/$dir/cif
-  pushd ./data/$dir
+  ln -srf ./cif/ ./exp_data_analysis/$dir/cif
+  pushd ./exp_data_analysis/$dir
     if [[ $CLEAN -eq 0 ]]; then
       yaxs "./train.yaml" -o "train" -c 160000 --overwrite
       yaxs "./val.yaml" -o "val" -c 160000 --overwrite
-      yaxs "./test.yaml" -o "test" -c 160000 --overwrite
     else
       rm "./train/" -rf
       rm "./val/" -rf
-      rm "./test/" -rf
     fi
   popd
 done

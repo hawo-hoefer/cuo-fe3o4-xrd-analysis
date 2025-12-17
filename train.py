@@ -250,7 +250,6 @@ def add_noise(
 def train_model(
     train: ChunkDS,
     val: ChunkDS,
-    test: ChunkDS,
     epochs: int,
     seed: int,
     noise_amt: float,
@@ -258,21 +257,24 @@ def train_model(
     save_path: str,
     log_path: str,
     with_progress: bool,
+    f: int = 1,
+    of: int = 1,
+    batch_size: int = 8192,
+    lr: float = 1e-3,
 ):
     dl_cfg = {
-        "batch_size": 8192,
+        "batch_size": batch_size,
         "collate_fn": partial(add_noise, noise_amt=noise_amt, cex=cfg_extrema),
-        "prefetch_factor": 4,
+        "prefetch_factor": 2,
         "pin_memory": True,
         "shuffle": True,
-        "persistent_workers": False,
-        "num_workers": 24,
+        "persistent_workers": True,
+        "num_workers": 12,
         "generator": torch.Generator(device="cuda").manual_seed(seed),
     }
     torch.manual_seed(seed)
     train_loader = DataLoader(train, **dl_cfg)
     val_loader = DataLoader(val, **dl_cfg)
-    test_loader = DataLoader(test, **dl_cfg)
 
     X_, (_, per_phase, per_pat) = next(iter(train_loader))
 
@@ -284,13 +286,12 @@ def train_model(
         n_phases_ds,
         per_phase.shape[-1],
         per_pat.shape[-1],
-        f=1,
-        of=1,
+        f=f,
+        of=of,
     )
 
     _ = model(X_.cuda())
 
-    lr = 1e-3
     opt = torch.optim.Adam(model.parameters(), lr=lr, maximize=False, weight_decay=5e-3)
 
     sched = ReduceLROnPlateau(
@@ -305,7 +306,6 @@ def train_model(
         c_model,
         train_loader,
         val_loader,
-        test_loader,
         opt,
         [sched] if sched is not None else [],
         with_progress=with_progress,
@@ -373,7 +373,6 @@ def main():
         print(f"================================================================")
         train = ChunkDS(os.path.join(workdir, "data", line, "train"), num_threads=5)
         val = ChunkDS(os.path.join(workdir, "data", line, "val"), num_threads=5)
-        test = ChunkDS(os.path.join(workdir, "data", line, "test"), num_threads=5)
         data_cfg_path = os.path.join(workdir, "data", line, "train.yaml")
         cex = load_config_extrema(data_cfg_path)
 
@@ -393,14 +392,13 @@ def main():
                 train_model(
                     train,
                     val,
-                    test,
                     epochs,
                     seed,
                     noise * ref_pat_height,
                     cex,
                     best_model_path,
                     log_path,
-                    with_progress=progress,
+                    progress,
                 )
             except KeyboardInterrupt:
                 exit(1)
