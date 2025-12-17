@@ -13,11 +13,16 @@ from torch import Tensor
 from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
+from tqdm.auto import tqdm
 
 from metrics import Metrics, TotalScore, TVDLoss
 from model import ConvRegressor, MultiScaleRegressor
-from parse_cfg import load_config_extrema
+from parse_cfg import CfgExtrema, load_config_extrema
+from ref_pat_height import get_ref_pat_height
 from trainer import Trainer
+import logging
+
+logging.captureWarnings(True)
 
 torch.set_default_device("cuda")
 torch.set_float32_matmul_precision("high")
@@ -197,40 +202,30 @@ class ChunkDS(torch.utils.data.Dataset):
 
 
 TORCH_DTYPE = torch.float32
-
-cex = load_config_extrema(os.path.join(os.path.dirname(__file__), "data-train.yaml"))
+cex = None
 
 
 def add_noise(
-    data: tuple[list[Tensor], list[Tensor]], noise_amt: float
+    data: tuple[list[Tensor], list[Tensor]], noise_amt: float, cex: CfgExtrema,
 ) -> tuple[Tensor, tuple[Tensor, Tensor, Tensor]]:
     (inputs,), (
         strains,
         instrument_parameters,
         mean_ds_nm,
         ds_etas,
-        mustrain,
-        mustrain_etas,
+        mustrain,  # type: ignore
+        mustrain_etas,  # type: ignore
         volume_fractions,
-        impurity_sum,
+        impurity_sum,  # type: ignore
         sample_displacement_mu_m,
-        impurity_max,
-        weight_fractions,
+        impurity_max,  # type: ignore
+        weight_fractions,  # type: ignore
         background_parameters,
     ) = data
-    # TODO: maybe poisson noise
     X = inputs
-    # X -= X.min(dim=-1, keepdim=True).values
-    # rmin, rmax = 0.1, 5
-    # roff_min, roff_max = 0, 1000
-    # mul = torch.rand(size=[X.shape[0], 1], device=X.device) * (rmax - rmin) + rmin
-    # roff = torch.rand(size=[X.shape[0], 1], device=X.device) * (roff_max - roff_min) + roff_min
-
-    # X = torch.poisson(X * mul + roff)
-    # X -= X.min(dim=-1, keepdim=True).values
-    # X /= X.max(dim=-1, keepdim=True).values
 
     scale = torch.rand(size=[X.shape[0]], device=X.device) * noise_amt
+
     X += torch.randn(size=X.shape, device=X.device) * scale[:, None]
     X -= X.min(dim=-1, keepdim=True).values
     X /= X.max(dim=-1, keepdim=True).values
@@ -238,12 +233,10 @@ def add_noise(
     per_pattern, per_phase = cex.combine_normalize(
         strains,
         mean_ds_nm,
-        # mustrain,
         background_parameters,
         sample_displacement_mu_m,
         instrument_parameters,
         ds_etas,
-        # mustrain_etas,
         X.device,
     )
 
@@ -254,10 +247,21 @@ def add_noise(
     )
 
 
-def train_model(train: ChunkDS, val: ChunkDS, seed: int, noise_amt: float):
+def train_model(
+    train: ChunkDS,
+    val: ChunkDS,
+    test: ChunkDS,
+    epochs: int,
+    seed: int,
+    noise_amt: float,
+    cfg_extrema: CfgExtrema,
+    save_path: str,
+    log_path: str,
+    with_progress: bool,
+):
     dl_cfg = {
         "batch_size": 8192,
-        "collate_fn": partial(add_noise, noise_amt=noise_amt),
+        "collate_fn": partial(add_noise, noise_amt=noise_amt, cex=cfg_extrema),
         "prefetch_factor": 4,
         "pin_memory": True,
         "shuffle": True,
@@ -268,10 +272,9 @@ def train_model(train: ChunkDS, val: ChunkDS, seed: int, noise_amt: float):
     torch.manual_seed(seed)
     train_loader = DataLoader(train, **dl_cfg)
     val_loader = DataLoader(val, **dl_cfg)
+    test_loader = DataLoader(test, **dl_cfg)
 
-    X_, (composition, per_phase, per_pat) = next(iter(train_loader))
-    print("got dummy batch")
-    print("train", composition.shape, per_phase.shape, per_pat.shape)
+    X_, (_, per_phase, per_pat) = next(iter(train_loader))
 
     n_phases_ds = len(train.extra["encoding"])  # type: ignore
     assert n_phases_ds == per_phase.shape[1]
@@ -293,9 +296,7 @@ def train_model(train: ChunkDS, val: ChunkDS, seed: int, noise_amt: float):
     sched = ReduceLROnPlateau(
         opt, threshold_mode="rel", patience=3, threshold=1e-2, factor=1e-1
     )
-    # sched = StepLR(opt, 1, gamma=0.95)
-    # sched = None
-    # c_model = torch.compile(model)
+
     c_model = model
     m = Metrics("cuda", tvd=TVDLoss(), tot=TotalScore(meta_weight=0.05))
     t = Trainer(
@@ -304,9 +305,10 @@ def train_model(train: ChunkDS, val: ChunkDS, seed: int, noise_amt: float):
         c_model,
         train_loader,
         val_loader,
+        test_loader,
         opt,
         [sched] if sched is not None else [],
-        with_progress=True,
+        with_progress=with_progress,
     )
 
     best_loss = 1e100
@@ -314,10 +316,7 @@ def train_model(train: ChunkDS, val: ChunkDS, seed: int, noise_amt: float):
         f"training model with {sum(torch.numel(p) for p in model.parameters()):,} parameters"
     )
 
-    epochs = 20
-    save_path = "./trained.pt"
-
-    l = open("train.log", "w")
+    l = open(log_path, "w")
     try:
         title_str = f"{'epoch':5} {'time_ms':8} {'lr':8} {'t_tot':8} {'v_tot':8} {'t_tvd':8} {'v_tvd':8}\n"
         l.write(title_str)
@@ -342,6 +341,7 @@ def train_model(train: ChunkDS, val: ChunkDS, seed: int, noise_amt: float):
             l.flush()
     except KeyboardInterrupt:
         print("Exiting due to KeyboardInterrupt")
+        raise KeyboardInterrupt()
     finally:
         l.close()
         del train_loader
@@ -349,18 +349,61 @@ def train_model(train: ChunkDS, val: ChunkDS, seed: int, noise_amt: float):
         del train
         del val
 
-    return save_path
-
 
 def main():
+    global cex
+
+    workdir = os.path.dirname(__file__)
+    trained_models_dir = os.path.join(workdir, "trained_models")
+    progress = True
+    if "--no-progress" in sys.argv:
+        progress = False
+
+    if not os.path.exists(trained_models_dir):
+        os.makedirs(trained_models_dir)
+    ref_pat_height, _ = get_ref_pat_height(print_results=False)
+
+    epochs = 30
     emission_lines = ["cuka1", "cuka", "cukab", "c3", "c4"]
+    noises = [2**-6, 2**-5, 2**-4, 2**-3, 2**-2]
 
     for line in emission_lines:
-        train = ChunkDS(os.path.join("./data", line, "train"), num_threads=5)
-        val = ChunkDS(os.path.join("./data", line, "val"), num_threads=5)
-        for noise in [10, 20, 50, 100]:
+        print(f"================================================================")
+        print(f"Loading data for emission lines {line}")
+        print(f"================================================================")
+        train = ChunkDS(os.path.join(workdir, "data", line, "train"), num_threads=5)
+        val = ChunkDS(os.path.join(workdir, "data", line, "val"), num_threads=5)
+        test = ChunkDS(os.path.join(workdir, "data", line, "test"), num_threads=5)
+        data_cfg_path = os.path.join(workdir, "data", line, "train.yaml")
+        cex = load_config_extrema(data_cfg_path)
+
+        for noise in noises:
+            # noise as fraction of reference pattern height
             seed = 1234
-            train_model(train, val, seed=seed, noise_amt=noise)
+            base_dir = os.path.join(trained_models_dir, line, f"{noise}")
+            if not os.path.exists(base_dir):
+                os.makedirs(base_dir)
+
+            best_model_path = os.path.join(base_dir, "best_model.pt")
+            log_path = os.path.join(base_dir, "train.log")
+            print(f"================================================================")
+            print(f"Training model for emission lines {line} and noise level {noise}")
+            print(f"================================================================")
+            try:
+                train_model(
+                    train,
+                    val,
+                    test,
+                    epochs,
+                    seed,
+                    noise * ref_pat_height,
+                    cex,
+                    best_model_path,
+                    log_path,
+                    with_progress=progress,
+                )
+            except KeyboardInterrupt:
+                exit(1)
 
 
 if __name__ == "__main__":

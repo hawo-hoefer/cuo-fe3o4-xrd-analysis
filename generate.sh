@@ -35,8 +35,9 @@ for dir in ${dirs[@]}; do
   ln -srf ./cif/ ./data/$dir/cif
   pushd ./data/$dir
     if [[ $CLEAN -eq 0 ]]; then
-      yaxs ./data-train.yaml -o train -c 160000 --overwrite
-      yaxs ./data-val.yaml -o val -c 160000 --overwrite
+      yaxs "./train.yaml" -o "train" -c 160000 --overwrite
+      yaxs "./val.yaml" -o "val" -c 160000 --overwrite
+      yaxs "./test.yaml" -o "test" -c 160000 --overwrite
     else
       rm "./train/" -rf
       rm "./val/" -rf

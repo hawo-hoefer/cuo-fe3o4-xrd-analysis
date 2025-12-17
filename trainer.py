@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from typing import Literal
 import torch
 from torch import Tensor
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -18,6 +19,7 @@ class Trainer:
         model: torch.nn.Module,
         train_loader: DataLoader,
         val_loader: DataLoader,
+        test_loader: DataLoader,
         optimizer: Optimizer,
         schedulers: list[torch.optim.lr_scheduler.LRScheduler],
         with_progress: bool = False
@@ -30,10 +32,19 @@ class Trainer:
         self.schedulers = schedulers
         self.back_metric = back_metric
         self.with_progress = with_progress
+        self.test_loader = test_loader
 
-    def half_epoch(self, p: None | tqdm) -> MetricDict:
+    def half_epoch(self, p: None | tqdm, state: Literal["train", "test", "val"]) -> MetricDict:
         self.m.reset()
-        loader = self.tl if torch.is_grad_enabled() else self.vl
+        if state == "train":
+            loader = self.tl
+        elif state == "test":
+            loader = self.test_loader
+        elif state == "val":
+            loader = self.vl
+        else:
+            raise ValueError(f"Invalid state for half_epoch: '{state}'. Must be either 'train', 'test', or 'val'.")
+
         for X, Y in loader:
             if isinstance(X, Sequence):
                 X = [x.cuda() for x in X]
@@ -46,18 +57,15 @@ class Trainer:
             else:
                 Y = [Y.cuda()]
 
-            part = "val"
-
             pred = self.model(*X)
             l = self.m.update(pred, Y)[self.back_metric]
-            if torch.is_grad_enabled():
+            if state == "train":
                 self.opt.zero_grad()
                 l.backward()
                 self.opt.step()
-                part = "train"
 
             if p:
-                p.set_description(f"{part}: {l.item():4.2e}")
+                p.set_description(f"{state}: {l.item():4.2e}")
                 p.update()
 
         return self.m.finalize()
@@ -69,10 +77,10 @@ class Trainer:
         else:
             p = None
 
-        tm = self.half_epoch(p)
+        tm = self.half_epoch(p, "train")
         self.model.eval()
         with torch.no_grad():
-            vm = self.half_epoch(p)
+            vm = self.half_epoch(p, "val")
 
             for s in self.schedulers:
                 if isinstance(s, ReduceLROnPlateau):
@@ -81,3 +89,16 @@ class Trainer:
                     s.step()
 
         return tm, vm
+
+    def test(self) -> MetricDict:
+        if self.with_progress:
+            p = tqdm(total=len(self.test_loader), leave=False)
+        else:
+            p = None
+
+        self.m.reset()
+
+        with torch.no_grad():
+            vm = self.half_epoch(p, "test")
+
+        return vm
