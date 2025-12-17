@@ -6,7 +6,7 @@ kind: !AngleDispersive
   two_theta_range: [10, 70]
   goniometer_radius_mm: 180
   sample_displacement_mu_m: [-500, 500]
-  instrument_parameters: {u: [0.0, 0.25], v: [0.25, 0.0], w: [0.0, 0.25], x: 0, y: 0, w: 0}
+  instrument_parameters: {u: [0.0, 0.25], v: [-0.25, 0.0], w: [0.0, 0.25], x: 0, y: 0, z: 0}
   background: !Chebyshev
     coefs: 
       - [-1.0, 1.0]
