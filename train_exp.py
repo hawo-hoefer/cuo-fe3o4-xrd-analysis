@@ -8,7 +8,7 @@ exp_base_dir = os.path.join(os.path.dirname(__file__), "exp_data_analysis")
 save_dir = os.path.join(os.path.dirname(__file__), "trained_models", "exp")
 
 # emission_lines = ["cuka", "cukab"]
-emission_lines = ["cuka"]
+emission_lines = ["cukab"]
 
 for line in emission_lines:
     data_dir = os.path.join(exp_base_dir, line)
@@ -28,7 +28,7 @@ for line in emission_lines:
     train_model(
         train,
         val,
-        10,
+        30,
         1234,
         0.05 * ref_pat_height,
         cex,
@@ -36,7 +36,7 @@ for line in emission_lines:
         log_path,
         with_progress=True,
         f=4,
-        of=4,
-        batch_size=128,
-        lr=1e-2
+        of=2,
+        batch_size=8192,
+        lr=3e-3
     )

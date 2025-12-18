@@ -46,8 +46,8 @@ if [[ $ONLY_REF -eq 1 ]]; then
 fi
 
 dirs=(
-  "cuka"
-  # "cukab"
+  # "cuka"
+  "cukab"
 )
 
 for dir in ${dirs[@]}; do

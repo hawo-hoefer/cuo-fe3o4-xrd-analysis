@@ -1,9 +1,7 @@
 kind: !AngleDispersive
   emission_lines:
-  - wavelength_ams: 1.5406
-    weight: 0.6667
-  - wavelength_ams: 1.5445
-    weight: 0.3333
+    - {wavelength_ams: 1.5406, weight: 0.6567}
+    - {wavelength_ams: 1.5445, weight: 0.3423}
   n_steps: 2048
   two_theta_range: [10, 70]
   goniometer_radius_mm: 180

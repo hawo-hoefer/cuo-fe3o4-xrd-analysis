@@ -350,6 +350,9 @@ def train_model(
         del val
 
 
+emission_lines = ["cuka1", "cuka", "cukab", "c3", "c4"]
+noises = [2**-6, 2**-5, 2**-4, 2**-3, 2**-2]
+
 def main():
     global cex
 
@@ -364,8 +367,6 @@ def main():
     ref_pat_height, _ = get_ref_pat_height(print_results=False)
 
     epochs = 30
-    emission_lines = ["cuka1", "cuka", "cukab", "c3", "c4"]
-    noises = [2**-6, 2**-5, 2**-4, 2**-3, 2**-2]
 
     for line in emission_lines:
         print(f"================================================================")
