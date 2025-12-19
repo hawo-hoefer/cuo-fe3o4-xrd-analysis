@@ -181,10 +181,10 @@ class MultiScaleRegressor(nn.Module):
 
         # fmt: off
         reduce_cfg = [
-            conv_block(ocs[0], self.n_phases * of, 2**4 + 1, pool=27, stride=1),
-            conv_block(ocs[1], self.n_phases * of, 2**3 + 1, pool=9,  stride=1),
-            conv_block(ocs[2], self.n_phases * of, 2**2 + 1, pool=3,  stride=1),
-            conv_block(ocs[3], self.n_phases * of, 2**1 + 1, pool=0,  stride=1),
+            conv_block(ocs[0], self.n_phases * of, 2**4 + 1, pool=9, stride=1),
+            conv_block(ocs[1], self.n_phases * of, 2**3 + 1, pool=5, stride=1),
+            conv_block(ocs[2], self.n_phases * of, 2**2 + 1, pool=3, stride=1),
+            conv_block(ocs[3], self.n_phases * of, 2**1 + 1, pool=0, stride=1),
         ]
         # fmt: on
 

@@ -2,15 +2,15 @@ import os
 
 from parse_cfg import load_config_extrema
 from ref_pat_height import get_ref_pat_height
-from train import ChunkDS, train_model
+from train import train_model
+from chunkds import ChunkDS
 
 exp_base_dir = os.path.join(os.path.dirname(__file__), "exp_data_analysis")
 save_dir = os.path.join(os.path.dirname(__file__), "trained_models", "exp")
 
-# emission_lines = ["cuka", "cukab"]
-emission_lines = ["cukab"]
+emission_lines = [("cuka", 0.05), ("cukab", 0.05)]
 
-for line in emission_lines:
+for line, noise in emission_lines:
     data_dir = os.path.join(exp_base_dir, line)
     train_cfg_path = os.path.join(data_dir, "train.yaml")
     train = ChunkDS(os.path.join(data_dir, "train"))
@@ -28,15 +28,15 @@ for line in emission_lines:
     train_model(
         train,
         val,
-        30,
+        20,
         1234,
-        0.05 * ref_pat_height,
+        noise * ref_pat_height,
         cex,
         best_model_path,
         log_path,
         with_progress=True,
-        f=4,
+        f=2,
         of=2,
         batch_size=8192,
-        lr=3e-3
+        lr=1e-3,
     )

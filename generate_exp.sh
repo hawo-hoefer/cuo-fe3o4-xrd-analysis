@@ -46,7 +46,7 @@ if [[ $ONLY_REF -eq 1 ]]; then
 fi
 
 dirs=(
-  # "cuka"
+  "cuka"
   "cukab"
 )
 
