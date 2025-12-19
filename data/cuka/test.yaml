@@ -37,5 +37,5 @@ sample_parameters:
 simulation_parameters:
   normalize: false
   seed: 8910
-  n_patterns: 200000
+  n_patterns: 400000
   abstol: 1e-3
