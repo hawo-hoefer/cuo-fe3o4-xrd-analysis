@@ -178,8 +178,6 @@ emission_lines = ["cuka1", "cuka", "cukab", "c3", "c4"]
 noises = [2**-6, 2**-5, 2**-4, 2**-3, 2**-2]
 
 def main():
-    global cex
-
     workdir = os.path.dirname(__file__)
     trained_models_dir = os.path.join(workdir, "trained_models")
     progress = True
