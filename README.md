@@ -1,4 +1,4 @@
-# HiVE ComaNet Training Repository
+# HiVE ComaNet Training
 Due to licensing restraints, we cannot provide the CIFs of the analyzed phases.
 We used CuO from ICSD with collection code 16025, and Fe3O4 from ICSD with 
 collection code 183969. Depending on your access to ICSD, you may need to replace
