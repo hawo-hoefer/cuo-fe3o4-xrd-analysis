@@ -117,7 +117,7 @@ with torch.no_grad():
 
 tvd = np.abs(c[:, 0] - targets[:, 0]) / 2
 q = 1 - tvd
-print(q.min())
+print(f"{q.min()=}")
 time_per_step = df.set_index("idx").loc[unfiltered]["time_per_step_s"]
 mapp = ScalarMappable(norm=Normalize(vmin=time_per_step.min(), vmax=time_per_step.max()), cmap=sns.color_palette('crest', as_cmap=True))
 

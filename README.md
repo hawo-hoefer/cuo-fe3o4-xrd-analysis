@@ -24,7 +24,8 @@ mv /path/to/fe3o4.cif ./cif/Fe3O4_183969.cif
 
 Simply generate the datasets using
 ```comandline
-./generate.sh
+./generate.sh # for synthetic data study
+./generate_exp.sh # for experimental analysis
 ```
 
 Note that this requires some space. It will produce all 5 (noiseless) datasets mentioned in the paper.
@@ -40,6 +41,17 @@ source .venv/bin/activate
 
 Then, run the study using
 ```commandline
-python3 ./train.py
+python3 ./train.py && python3 ./train_exp.py
+```
+
+Compute the error distributions
+```commandline
+python3 ./compute_model_error.py
+```
+
+## Generating Plots
+Plots from the paper can be generated using
+```commandline
+python3 ./synthetic_data.py && python3 ./experimental_data.py
 ```
 
