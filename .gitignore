@@ -10,3 +10,6 @@ data/ref_pattern/ref/
 exp_data_analysis/*/train/
 exp_data_analysis/*/val/
 trained_models/
+err_meta.json
+errors.npy
+*.pdf
