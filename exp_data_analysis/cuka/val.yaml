@@ -20,7 +20,7 @@ kind: !AngleDispersive
       - [-1.0, 1.0]
       - [-1.0, 1.0]
       - [-1.0, 1.0]
-    scale: [0, 1500]
+    scale: [0, 1260]
 sample_parameters:
   structure_permutations: 10000
   concentration_subset: [1, 7]
